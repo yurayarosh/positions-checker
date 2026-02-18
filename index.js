@@ -57,12 +57,12 @@ const sendNotification = async platform => {
 
 const updateList = async platform => {
   try {
-    const prevId = await loadLastId(platform);
+    const prevId = (await loadLastId(platform)).toString();
 
     const list = await getList(platform);
     if (!list || !list.length) return;
 
-    const [currId] = list;
+    const currId = list[0].toString();
 
     if (prevId && currId && prevId !== currId) {
       await sendNotification(platform);
