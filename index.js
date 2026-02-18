@@ -64,12 +64,8 @@ const updateList = async platform => {
 
     const currId = list[0].toString();
 
-    if (prevId && currId && prevId !== currId) {
-      await sendNotification(platform);
-    }
-
-    // сохраняем после проверки
-    if (currId) {
+    if (currId && prevId !== currId) {
+      if (prevId) await sendNotification(platform);
       await saveLastId(platform, currId);
     }
   } catch (error) {
