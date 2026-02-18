@@ -13,6 +13,7 @@
   },
   "keywords": [],
   "dependencies": {
+    "@upstash/redis": "^1.36.2",
     "axios": "^1.13.5",
     "cors": "^2.8.5",
     "dotenv": "^17.3.1",

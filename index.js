@@ -3,23 +3,44 @@ const { getList } = require('./getList');
 const cors = require('cors');
 const axios = require('axios');
 require('dotenv').config();
-const { writeFileSync, existsSync, readFileSync } = require('fs');
+const { Redis } = require('@upstash/redis');
 
 const app = express();
 app.use(cors());
 
 const PORT = process.env.PORT || 5000;
-const millisecondsInDay = 1000 * 60 * 60 * 24;
 const millisecondsInMinute = 1000 * 60;
 
-function saveLastId(fileName = '', id) {
-  writeFileSync(fileName, id);
+/**
+ * -----------------------
+ * Upstash Redis setup
+ * -----------------------
+ */
+
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
+
+/**
+ * -----------------------
+ * Redis helpers
+ * -----------------------
+ */
+
+async function saveLastId(platform, id) {
+  await redis.set(`lastId:${platform}`, id);
 }
 
-function loadLastId(fileName = '') {
-  if (!existsSync(fileName)) return null;
-  return readFileSync(fileName, 'utf-8');
+async function loadLastId(platform) {
+  return await redis.get(`lastId:${platform}`);
 }
+
+/**
+ * -----------------------
+ * Telegram notification
+ * -----------------------
+ */
 
 const sendNotification = async platform => {
   return await axios.post(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT}/sendMessage`, {
@@ -28,26 +49,50 @@ const sendNotification = async platform => {
   });
 };
 
-const updateList = async platform => {
-  const fileName = platform === 'dou' ? 'lastDouId.txt' : 'lastDjinniId.txt';
-  const prevId = loadLastId(fileName);
-  const list = await getList(platform);
-  const [currId] = list;
-  saveLastId(fileName, currId);
+/**
+ * -----------------------
+ * Main update logic
+ * -----------------------
+ */
 
-  if (prevId && currId && prevId !== currId) {
-    try {
+const updateList = async platform => {
+  try {
+    const prevId = await loadLastId(platform);
+
+    const list = await getList(platform);
+    if (!list || !list.length) return;
+
+    const [currId] = list;
+
+    if (prevId && currId && prevId !== currId) {
       await sendNotification(platform);
-    } catch (error) {
-      console.error(error);
     }
+
+    // сохраняем после проверки
+    if (currId) {
+      await saveLastId(platform, currId);
+    }
+  } catch (error) {
+    console.error(`Error updating ${platform}:`, error);
   }
 };
+
+/**
+ * -----------------------
+ * Start polling
+ * -----------------------
+ */
 
 setInterval(async () => {
   await updateList('djinni');
   await updateList('dou');
 }, millisecondsInMinute);
+
+/**
+ * -----------------------
+ * Express server
+ * -----------------------
+ */
 
 app.get('/', (req, res) => {
   res.send('Server is up and running!');
