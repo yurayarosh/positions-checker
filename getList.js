@@ -25,7 +25,7 @@ const getList = async platform => {
     await page.setViewport({ width: 1080, height: 1024 });
 
     list = platform === 'dou'
-      ? await page.$$eval('#vacancyListId > ul > li a.vt', links => links.map(link => {
+      ? await page.$$eval('#vacancyListId > ul > .l-vacancy:not(.__hot) a.vt', links => links.map(link => {
         const href = link.href
         const match = href.match(/vacancies\/(\d+)/);
         return match[1];
