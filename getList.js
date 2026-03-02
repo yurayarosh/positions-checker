@@ -30,7 +30,7 @@ const getList = async platform => {
         const match = href.match(/vacancies\/(\d+)/);
         return match[1];
       }))
-     : await page.$$eval('.list-jobs > li', items => items.map(item => item.id));
+     : await page.$$eval('.list-jobs > .job-item', items => items.map(item => item.id));
   } catch (e) {
     console.log(e);
     res.status(500).json(`Something went wrong while running Puppeteer: ${e}`);
