@@ -42,10 +42,10 @@ async function loadLastId(platform) {
  * -----------------------
  */
 
-const sendNotification = async platform => {
+const sendNotification = async (platform, item) => {
   return await axios.post(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT}/sendMessage`, {
     chat_id: process.env.TELEGRAM_CHAT_ID,
-    text: `${platform} positions list updated`,
+    text: `🆕 ${platform}\n${item.title}`,
   });
 };
 
@@ -57,15 +57,31 @@ const sendNotification = async platform => {
 
 const updateList = async platform => {
   try {
-    const prevId = (await loadLastId(platform)).toString();
+    const prevIdRaw = await loadLastId(platform);
+    const prevId = prevIdRaw ? prevIdRaw.toString() : null;
 
     const list = await getList(platform);
     if (!list || !list.length) return;
 
-    const currId = list[0].toString();
+    const currId = list[0].id.toString();
 
-    if (currId && prevId !== currId) {
-      if (prevId) await sendNotification(platform);
+    if (!prevId) {
+      await saveLastId(platform, currId);
+      return;
+    }
+
+    let newItems = [];
+
+    for (const item of list) {
+      if (item.id.toString() === prevId) break;
+      newItems.push(item);
+    }
+
+    if (newItems.length > 0) {
+      for (const item of newItems.reverse()) {
+        await sendNotification(platform, item);
+      }
+
       await saveLastId(platform, currId);
     }
   } catch (error) {

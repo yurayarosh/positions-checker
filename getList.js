@@ -24,13 +24,30 @@ const getList = async platform => {
     // Set screen size
     await page.setViewport({ width: 1080, height: 1024 });
 
-    list = platform === 'dou'
-      ? await page.$$eval('#vacancyListId > ul > .l-vacancy:not(.__hot) a.vt', links => links.map(link => {
-        const href = link.href
-        const match = href.match(/vacancies\/(\d+)/);
-        return match[1];
-      }))
-     : await page.$$eval('.list-jobs > .job-item', items => items.map(item => item.id));
+    list =
+      platform === 'dou'
+        ? await page.$$eval('#vacancyListId > ul > .l-vacancy:not(.__hot) a.vt', links =>
+            links.map(link => {
+              const href = link.href;
+              const match = href.match(/vacancies\/(\d+)/);
+              const [, id] = match;
+              const title = link.textContent;
+              return {
+                id,
+                title,
+              };
+            })
+          )
+        : await page.$$eval('.list-jobs > .job-item', items =>
+            items.map(item => {
+              const id = item.id;
+              const title = item.querySelector('.job-item__position')?.textContent || '';
+              return {
+                id,
+                title,
+              };
+            })
+          );
   } catch (e) {
     console.log(e);
     res.status(500).json(`Something went wrong while running Puppeteer: ${e}`);
